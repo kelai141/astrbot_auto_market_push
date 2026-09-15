@@ -1,0 +1,27 @@
+# secrets / runtime state
+.env
+.state/
+*.session.json
+storage_state.json
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# editors / os
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

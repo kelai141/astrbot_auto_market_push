@@ -1,0 +1,188 @@
+{
+  "cloud": {
+    "description": "AstrBot Cloud 云端连接",
+    "type": "object",
+    "hint": "插件市场（cloud.astrbot.app）的连接与会话设置。会话必须先在电脑上通过命令行获取。",
+    "obvious_hint": true,
+    "items": {
+      "base_url": {
+        "description": "API 基址",
+        "type": "string",
+        "hint": "一般无需修改。",
+        "default": "https://cloud.astrbot.app/api/v1"
+      },
+      "storage_state_json": {
+        "description": "会话 JSON（storage_state）",
+        "type": "text",
+        "hint": "在电脑上执行 `ampush login` 后，把生成的 .state/storage_state.json 内容整段粘贴到这里。会话过期时需要重新粘贴。",
+        "_secret": true,
+        "default": ""
+      },
+      "storage_state": {
+        "description": "会话文件路径",
+        "type": "string",
+        "hint": "如果你把 storage_state.json 放到了 AstrBot 主机上，也可以在这里填绝对路径，优先于上面的 JSON 内容。",
+        "default": ""
+      },
+      "timeout_seconds": {
+        "description": "请求超时（秒）",
+        "type": "float",
+        "default": 30.0
+      }
+    }
+  },
+  "github": {
+    "description": "GitHub 读取设置",
+    "type": "object",
+    "hint": "用于读取被跟踪仓库的 metadata.yaml。配置 Token 可把速率限制从 60 次/小时提升到 5000 次/小时。",
+    "items": {
+      "token": {
+        "description": "GitHub Token",
+        "type": "string",
+        "hint": "只需只读权限（public_repo 即可，私有仓库需要 repo）。强烈建议配置。",
+        "_secret": true,
+        "default": ""
+      },
+      "api_url": {
+        "description": "GitHub API 地址",
+        "type": "string",
+        "hint": "使用 GitHub Enterprise 时修改。",
+        "default": "https://api.github.com"
+      },
+      "timeout_seconds": {
+        "description": "请求超时（秒）",
+        "type": "float",
+        "default": 30.0
+      }
+    }
+  },
+  "watch": {
+    "description": "跟踪设置",
+    "type": "object",
+    "hint": "配置要实时跟踪的仓库以及轮询间隔。",
+    "obvious_hint": true,
+    "items": {
+      "repositories": {
+        "description": "监控的仓库列表",
+        "type": "list",
+        "items": {
+          "type": "string"
+        },
+        "hint": "每行一个，格式 `owner/repo`；需要跟踪非默认分支时写 `owner/repo#分支名`。例如 kelai141/astrbot_plugin_foo。",
+        "default": []
+      },
+      "overrides_yaml": {
+        "description": "各仓库的送审字段覆盖",
+        "type": "text",
+        "hint": "可选。用 YAML 为指定仓库覆盖送审字段，键为 owner/repo。例如：\nkelai141/astrbot_plugin_foo:\n  tags: [工具, 自动化]\n  category: 工具\n  social_link: https://github.com/kelai141",
+        "default": ""
+      },
+      "interval_seconds": {
+        "description": "轮询间隔（秒）",
+        "type": "int",
+        "hint": "最小 30 秒。建议 300 秒以上，避免浪费 GitHub 配额。",
+        "default": 300
+      },
+      "jitter_seconds": {
+        "description": "轮询抖动（秒）",
+        "type": "int",
+        "hint": "在间隔上下随机浮动，避免多个实例同时请求。",
+        "default": 15
+      },
+      "auto_start": {
+        "description": "启用插件时自动开始轮询",
+        "type": "bool",
+        "hint": "关闭后可用 /ampush start 手动启动。",
+        "default": true
+      },
+      "notify_target": {
+        "description": "结果通知目标 UMO",
+        "type": "string",
+        "hint": "可选。填写会话 UMO（如 aiocqhttp:GroupMessage:123456）后，每次送审结果会主动推送；留空则只回复命令。",
+        "default": ""
+      }
+    }
+  },
+  "submission": {
+    "description": "送审与限流保护",
+    "type": "object",
+    "hint": "防止重复提交、触发云端风控。默认值已足够安全。",
+    "items": {
+      "enabled": {
+        "description": "允许实际提交",
+        "type": "bool",
+        "hint": "关闭后只跟踪不提交（等同全局 dry-run），适合先观察一段时间。",
+        "default": true
+      },
+      "dry_run": {
+        "description": "演练模式",
+        "type": "bool",
+        "hint": "开启后只打印将要提交的内容，不真正发送。",
+        "default": false
+      },
+      "skip_if_pending": {
+        "description": "有待审核提交时跳过",
+        "type": "bool",
+        "hint": "云端同时对每个账号的待审核提交数量有限制，建议保持开启。",
+        "default": true
+      },
+      "max_submissions_per_24h": {
+        "description": "本地 24 小时送审上限",
+        "type": "int",
+        "hint": "0 表示不限制（不建议）。云端默认限制为 3 次。",
+        "default": 3
+      },
+      "min_interval_seconds": {
+        "description": "两次送审的最小间隔（秒）",
+        "type": "int",
+        "hint": "防止短时间连续提交。",
+        "default": 600
+      },
+      "respect_cloud_limits": {
+        "description": "遵循云端限流",
+        "type": "bool",
+        "hint": "读取 /market/options 返回的账号级限制并据此拦截。建议保持开启。",
+        "default": true
+      }
+    }
+  },
+  "notify": {
+    "description": "Webhook 通知",
+    "type": "object",
+    "hint": "可选：送审成功/失败/会话过期时 POST 一个 JSON 到你的 Webhook。",
+    "items": {
+      "enabled": {
+        "description": "启用 Webhook 通知",
+        "type": "bool",
+        "default": false
+      },
+      "webhook_url": {
+        "description": "Webhook 地址",
+        "type": "string",
+        "hint": "支持 Discord / Slack / 飞书 / ntfy / 自建接口等任意支持 JSON POST 的地址。",
+        "default": ""
+      },
+      "events": {
+        "description": "订阅的事件",
+        "type": "list",
+        "items": {
+          "type": "string"
+        },
+        "hint": "可选值：submitted（送审成功）、failed（送审失败）、rate_limited（被限流）、session_expired（会话过期）。",
+        "default": ["submitted", "failed", "session_expired"]
+      }
+    }
+  },
+  "logging": {
+    "description": "日志",
+    "type": "object",
+    "items": {
+      "level": {
+        "description": "日志等级",
+        "type": "string",
+        "options": ["DEBUG", "INFO", "WARNING", "ERROR"],
+        "default": "INFO"
+      }
+    }
+  }
+}

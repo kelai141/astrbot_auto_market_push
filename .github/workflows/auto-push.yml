@@ -1,0 +1,97 @@
+# 可复用的工作流：在**其他仓库**里这样调用即可，无需先 checkout 本项目。
+#
+# ```yaml
+# # .github/workflows/astrbot-market.yml（放在你自己的插件仓库里）
+# name: AstrBot Market Auto Push
+# on:
+#   release:
+#     types: [published]
+#   schedule:
+#     - cron: "0 */6 * * *"
+#   workflow_dispatch:
+#
+# jobs:
+#   push:
+#     uses: kelai141/astrbot_auto_market_push/.github/workflows/auto-push.yml@main
+#     with:
+#       repositories: kelai141/astrbot_plugin_foo
+#     secrets:
+#       AMP_CLOUD_STORAGE_STATE: ${{ secrets.AMP_CLOUD_STORAGE_STATE }}
+# ```
+#
+# 更轻量的做法是直接用仓库根目录的复合 Action：
+# ```yaml
+#     steps:
+#       - uses: kelai141/astrbot_auto_market_push@main
+#         with:
+#           storage-state: ${{ secrets.AMP_CLOUD_STORAGE_STATE }}
+#           repositories: kelai141/astrbot_plugin_foo
+# ```
+
+name: AstrBot Market Auto Push (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      repositories:
+        description: 要跟踪的仓库，逗号或换行分隔，支持 owner/repo#branch。
+        required: true
+        type: string
+      mode:
+        description: "check / once / run"
+        required: false
+        type: string
+        default: once
+      dry-run:
+        description: 只构建提交内容不真正发送。
+        required: false
+        type: boolean
+        default: false
+      config:
+        description: 已有配置文件路径，留空则使用 repositories 输入。
+        required: false
+        type: string
+        default: ""
+      runner:
+        description: 运行器。
+        required: false
+        type: string
+        default: ubuntu-latest
+    secrets:
+      AMP_CLOUD_STORAGE_STATE:
+        description: AstrBot Cloud 会话 JSON（必需）。
+        required: true
+      AMP_GITHUB_TOKEN:
+        description: 读取被跟踪仓库用的 Token，可选。
+        required: false
+    outputs:
+      summary:
+        description: 本轮动作摘要。
+        value: ${{ jobs.push.outputs.summary }}
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ${{ inputs.runner }}
+    outputs:
+      summary: ${{ steps.ampush.outputs.summary }}
+    steps:
+      - name: Checkout astrbot_auto_market_push
+        uses: actions/checkout@v4
+        with:
+          repository: kelai141/astrbot_auto_market_push
+          ref: main
+          path: .ampush
+
+      - name: Run ampush
+        id: ampush
+        uses: ./.ampush
+        with:
+          storage-state: ${{ secrets.AMP_CLOUD_STORAGE_STATE }}
+          repositories: ${{ inputs.repositories }}
+          github-token: ${{ secrets.AMP_GITHUB_TOKEN || github.token }}
+          mode: ${{ inputs.mode }}
+          dry-run: ${{ inputs.dry-run }}
+          config: ${{ inputs.config }}

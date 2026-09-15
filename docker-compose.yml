@@ -1,0 +1,19 @@
+services:
+  ampush:
+    build:
+      context: .
+    image: astrbot-auto-market-push:latest
+    container_name: ampush
+    restart: unless-stopped
+    volumes:
+      # 配置、storage_state.json 与去重数据库都持久化在这里
+      - ./data:/data
+    environment:
+      AMP_CONFIG: /data/config.yaml
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # 二选一：要么挂载 ./data/storage_state.json，要么在这里内联完整 JSON
+      AMP_CLOUD_STORAGE_STATE: ${AMP_CLOUD_STORAGE_STATE:-}
+      AMP_NOTIFY_WEBHOOK: ${AMP_NOTIFY_WEBHOOK:-}
+    command: ["run"]
+    # 想先观察一段时间不真正提交：
+    # command: ["run", "--dry-run"]

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install (with dev extras)
+        run: python -m pip install --disable-pip-version-check -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Test
+        run: pytest -q
+
+  import-smoke:
+    # Guard the AstrBot plugin entry point: metadata must be valid and the
+    # adapter must be importable even without astrbot installed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install --disable-pip-version-check .
+
+      - name: Validate metadata.yaml
+        run: |
+          python - <<'PY'
+          import sys, yaml
+          data = yaml.safe_load(open("metadata.yaml", encoding="utf-8"))
+          for key in ("name", "version", "author", "repo"):
+              if not data.get(key):
+                  sys.exit(f"metadata.yaml 缺少 {key}")
+          if data["name"] != "astrbot_auto_market_push":
+              sys.exit("metadata.yaml name 必须是 astrbot_auto_market_push")
+          print("metadata.yaml OK:", data["name"], data["version"])
+          PY
+
+      - name: Validate _conf_schema.json
+        run: python -c "import json; json.load(open('_conf_schema.json', encoding='utf-8')); print('_conf_schema.json OK')"
+
+      - name: CLI smoke test
+        run: |
+          ampush --version
+          ampush --help

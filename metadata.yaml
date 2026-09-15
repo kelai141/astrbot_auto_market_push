@@ -1,0 +1,28 @@
+name: astrbot_auto_market_push
+display_name: 插件市场自动送审
+short_desc: 跟踪 GitHub 仓库，metadata.yaml 版本一变就自动送审 AstrBot 插件市场
+desc: |
+  把「手动点进插件市场发布页、填表、提交」这件事自动化。
+
+  本插件会按你配置的间隔轮询指定 GitHub 仓库，读取默认分支上的 `metadata.yaml`。
+  一旦 `version` 发生变化（且没有正在审核的提交），就会调用 AstrBot Cloud 的送审接口
+  自动提交审核，并在完成后把结果发到聊天里。
+
+  特点：
+  - 不依赖任何 LLM，纯自动化机器人，开箱即用；
+  - 只在版本真正变化时提交，自带去重、最小间隔与 24 小时次数保护；
+  - 支持多仓库、多分支（`owner/repo#branch`）跟踪；
+  - 需要先完成一次浏览器登录（在电脑上用 CLI 执行 `ampush login`），把生成的
+    storage_state 粘贴到本插件配置里即可长期无人值守运行。
+
+  命令行版本与插件版本共用同一套引擎，也可以只用 CLI：`pip install astrbot-auto-market-push`。
+version: 0.1.0
+author: kelai141
+repo: https://github.com/kelai141/astrbot_auto_market_push
+astrbot_version: ">=4.17.0"
+social_link: https://github.com/kelai141
+tags:
+  - 开发工具
+  - 自动化
+  - 插件市场
+  - 效率

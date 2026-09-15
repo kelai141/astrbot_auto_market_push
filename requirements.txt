@@ -1,0 +1,6 @@
+# AstrBot 插件运行所需的依赖（由 AstrBot 在安装插件时自动 pip 安装）。
+# 注意：CLI 额外的依赖（typer / rich / playwright）不需要在这里声明，
+# 因为插件适配层 main.py 只导入核心引擎。
+httpx>=0.27
+pydantic>=2.7
+PyYAML>=6.0

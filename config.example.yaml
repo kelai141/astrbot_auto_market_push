@@ -1,0 +1,70 @@
+# astrbot_auto_market_push 配置示例
+#
+# 复制为 config.yaml 后按需修改。所有字符串都支持 ${ENV_VAR} 与 ${ENV_VAR:-默认值}
+# 形式的环境变量展开，方便在 Docker / CI 中注入密钥。
+
+cloud:
+  # AstrBot Cloud API 基址，一般无需修改
+  base_url: https://cloud.astrbot.app/api/v1
+  # 由 `ampush login` 生成的浏览器会话文件
+  storage_state: .state/storage_state.json
+  # 也可以直接内联会话 JSON（优先级高于 storage_state），适合 CI
+  # storage_state_json: ${AMP_CLOUD_STORAGE_STATE:-}
+  timeout_seconds: 30
+
+github:
+  # 只读即可。强烈建议配置，否则 GitHub 限流只有 60 次/小时
+  token: ${GITHUB_TOKEN:-}
+  api_url: https://api.github.com
+  timeout_seconds: 30
+
+watch:
+  # 轮询间隔（秒），最小 30
+  interval_seconds: 300
+  # 在间隔上下随机浮动，避免固定节奏
+  jitter_seconds: 15
+  repositories:
+    # 简写：跟踪默认分支
+    - repo: kelai141/astrbot_plugin_example
+
+    # 完整写法：跟踪指定分支，并覆盖送审字段
+    - repo: kelai141/astrbot_plugin_demo
+      ref: main
+      metadata_path: metadata.yaml
+      enabled: true
+      auto_submit: true
+      # 只有本地版本高于线上版本时才提交
+      require_version_change: true
+      overrides:
+        tags: [工具, 自动化]
+        category: 工具
+        social_link: https://github.com/kelai141
+        display_name: 演示插件
+
+submission:
+  # 演练模式：只构建并打印提交内容，不真正提交
+  dry_run: false
+  # 有待审核提交时跳过，避免占用审核名额
+  skip_if_pending: true
+  # 本地 24 小时送审上限（云端默认也是 3）
+  max_submissions_per_24h: 3
+  # 两次送审之间的最小间隔（秒）
+  min_interval_seconds: 600
+  # 读取 /market/options 的账号级限制并据此拦截
+  respect_cloud_limits: true
+
+state:
+  path: .state/state.sqlite3
+
+notify:
+  enabled: false
+  webhook_url: ${AMP_NOTIFY_WEBHOOK:-}
+  events:
+    - submitted
+    - failed
+    - rate_limited
+    - session_expired
+
+logging:
+  level: INFO
+  # file: .state/ampush.log

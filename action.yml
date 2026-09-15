@@ -1,0 +1,95 @@
+name: AstrBot Auto Market Push
+description: 跟踪指定 GitHub 仓库的 metadata.yaml 版本，自动送审 AstrBot 插件市场
+author: kelai141
+
+branding:
+  icon: upload-cloud
+  color: purple
+
+inputs:
+  storage-state:
+    description: AstrBot Cloud 的 storage_state JSON 内容。请务必通过 secrets 传入。
+    required: true
+  repositories:
+    description: 要跟踪的仓库，逗号或换行分隔，支持 owner/repo 与 owner/repo#branch。
+    required: false
+    default: ""
+  github-token:
+    description: 读取被跟踪仓库用的 GitHub Token（只读即可）。
+    required: false
+    default: ${{ github.token }}
+  mode:
+    description: "check 只检查不提交；once 检查并送审；run 常驻轮询。"
+    required: false
+    default: once
+  dry-run:
+    description: "'true' 时只构建提交内容，不真正发送。"
+    required: false
+    default: "false"
+  config:
+    description: 已有配置文件路径。留空则用上面的 repositories 输入自动配置。
+    required: false
+    default: ""
+  python-version:
+    description: Python 版本。
+    required: false
+    default: "3.12"
+
+outputs:
+  summary:
+    description: 本轮动作摘要。
+    value: ${{ steps.run.outputs.summary }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install astrbot-auto-market-push
+      shell: bash
+      run: pip install --disable-pip-version-check "${{ github.action_path }}"
+
+    - name: Run
+      id: run
+      shell: bash
+      env:
+        AMP_CLOUD_STORAGE_STATE: ${{ inputs.storage-state }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        AMP_REPOSITORIES: ${{ inputs.repositories }}
+        AMP_CONFIG: ${{ inputs.config }}
+        AMP_MODE: ${{ inputs.mode }}
+        AMP_DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        set -euo pipefail
+        if [ -z "${AMP_CLOUD_STORAGE_STATE}" ]; then
+          echo "::error title=缺少会话::请把 ampush login 生成的 storage_state.json 内容放到 secrets 里并传入 storage-state。"
+          exit 1
+        fi
+
+        args=("${AMP_MODE}")
+        if [ "${AMP_MODE}" != "check" ] && [ "${AMP_DRY_RUN}" = "true" ]; then
+          args+=("--dry-run")
+        fi
+        if [ -n "${AMP_CONFIG}" ]; then
+          args+=("--config" "${AMP_CONFIG}")
+        fi
+
+        log="$(mktemp)"
+        set +e
+        ampush "${args[@]}" 2>&1 | tee "${log}"
+        status="${PIPESTATUS[0]}"
+        set -e
+
+        {
+          echo "summary<<AMPUSH_EOF"
+          cat "${log}"
+          echo "AMPUSH_EOF"
+        } >> "${GITHUB_OUTPUT}"
+
+        if [ "${status}" -ne 0 ]; then
+          echo "::error title=ampush 运行失败::退出码 ${status}，详见上方日志。"
+          exit "${status}"
+        fi
